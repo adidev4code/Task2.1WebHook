@@ -1,1 +1,76 @@
 // Sending Data to the Web
+
+#include <WiFiNINA.h>
+#include <ThingSpeak.h>
+#include "DHT.h"
+
+// Sensor settings
+#define DHTPIN 8
+#define DHTTYPE DHT22
+DHT dht(DHTPIN, DHTTYPE);
+
+// Wi-Fi settings
+char ssid[] = "Student";      
+char pass[] = "CUPunjab";  
+WiFiClient client;
+
+// ThingSpeak settings
+unsigned long myChannelNumber = 3023704;               
+const char * myWriteAPIKey = "AON9KERDCQZWMT9Y";        
+
+// Buzzer & LED pins, 
+const int buzzerPin = 10;
+const int led = 6;
+
+// Temperature threshold
+const float tempThreshold = 20.0;
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(buzzerPin, OUTPUT);
+  pinMode(led, OUTPUT);
+  digitalWrite(buzzerPin, LOW);  // Ensure buzzer is off initially
+  digitalWrite(led, LOW);
+
+  WiFi.begin(ssid, pass);
+  while (WiFi.status() != WL_CONNECTED) {
+    Serial.print(".");
+    delay(1000);
+  }
+  Serial.println("\nConnected to WiFi");
+
+  ThingSpeak.begin(client);
+  dht.begin();
+}
+
+void loop() {
+  float temp = dht.readTemperature();
+  float hum = dht.readHumidity();
+
+  Serial.print("Temp: "); Serial.println(temp);
+  Serial.print("Hum: "); Serial.println(hum);
+
+  // Check temperature condition for alarm
+  if (temp >= tempThreshold) {
+    digitalWrite(buzzerPin, HIGH);  // Turn on buzzer
+    digitalWrite(led, HIGH);        // Turn on LED
+    Serial.println("ALARM: Temperature too high!");
+  } else {
+    digitalWrite(buzzerPin, LOW);   // Turn off buzzer
+    digitalWrite(led, LOW);         // Turn off LED
+  }
+
+  // Send data to ThingSpeak
+  ThingSpeak.setField(1, temp);
+  ThingSpeak.setField(2, hum);
+  int x = ThingSpeak.writeFields(myChannelNumber, myWriteAPIKey);
+
+  if (x == 200) {
+    Serial.println("Channel update successful.");
+  } else {
+    Serial.print("Error updating channel. HTTP error code: ");
+    Serial.println(x);
+  }
+
+  delay(2000); // Wait 20 seconds before next reading
+}
