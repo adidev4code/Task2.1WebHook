@@ -1,4 +1,4 @@
-// Sending Data to the Web
+// Code:
 
 #include <WiFiNINA.h>
 #include "DHT.h"
